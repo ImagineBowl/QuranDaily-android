@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -13,13 +14,18 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.SkipNext
+import androidx.compose.material.icons.filled.SkipPrevious
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -35,9 +41,6 @@ import com.imaginebowl.qurandaily.core.domain.model.Surah
 import com.imaginebowl.qurandaily.ui.theme.Accent
 import com.imaginebowl.qurandaily.ui.theme.AppDimensions
 
-/**
- * Full audio player UI shell. ExoPlayer, scrubber, and download controls land in M7.
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AudioPlayerSheet(
@@ -48,8 +51,18 @@ fun AudioPlayerSheet(
     val currentSurahNumber by sharedAudioViewModel.currentSurahNumber.collectAsStateWithLifecycle()
     val currentAyah by sharedAudioViewModel.currentAyahInSurah.collectAsStateWithLifecycle()
     val isPlaying by sharedAudioViewModel.isPlaying.collectAsStateWithLifecycle()
+    val isLoading by sharedAudioViewModel.isLoadingAudio.collectAsStateWithLifecycle()
+    val currentTime by sharedAudioViewModel.currentTime.collectAsStateWithLifecycle()
+    val duration by sharedAudioViewModel.duration.collectAsStateWithLifecycle()
+    val arabicPreview by sharedAudioViewModel.currentAyahArabicPreview.collectAsStateWithLifecycle()
+    val selectedSurah by sharedAudioViewModel.selectedSurahNumber.collectAsStateWithLifecycle()
+    val downloadedSurahs by sharedAudioViewModel.downloadedSurahs.collectAsStateWithLifecycle()
+    val isDownloading by sharedAudioViewModel.isDownloadingAudio.collectAsStateWithLifecycle()
+    val errorMessage by sharedAudioViewModel.audioErrorMessage.collectAsStateWithLifecycle()
 
-    val surah = surahs.firstOrNull { it.number == currentSurahNumber }
+    val displaySurahNumber = currentSurahNumber ?: selectedSurah
+    val surah = surahs.firstOrNull { it.number == displaySurahNumber }
+    val isDownloaded = downloadedSurahs.contains(displaySurahNumber)
 
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Column(
@@ -108,38 +121,66 @@ fun AudioPlayerSheet(
 
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.padding(horizontal = 28.dp, vertical = 16.dp),
+                modifier = Modifier.padding(horizontal = 28.dp, vertical = 8.dp),
             ) {
-                Text(
-                    text = surah?.englishName ?: "Not playing",
-                    style = MaterialTheme.typography.headlineSmall,
-                )
+                Text(text = surah?.englishName ?: "Not playing", style = MaterialTheme.typography.headlineSmall)
                 surah?.let {
+                    Text(text = it.englishNameTranslation, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                arabicPreview?.let { preview ->
                     Text(
-                        text = it.englishNameTranslation,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        text = preview,
+                        fontSize = 20.sp,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(top = 8.dp),
+                        maxLines = 3,
                     )
                 }
                 currentAyah?.let { ayah ->
                     Text(
                         text = "Ayah $ayah of ${surah?.numberOfAyahs ?: "?"}",
                         color = Accent,
-                        modifier = Modifier.padding(top = 8.dp),
+                        modifier = Modifier.padding(top = 4.dp),
                     )
                 }
             }
 
+            if (duration > 0) {
+                val progress = (currentTime / duration).toFloat().coerceIn(0f, 1f)
+                Slider(
+                    value = progress,
+                    onValueChange = { sharedAudioViewModel.seek(it.toDouble()) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 28.dp),
+                )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 28.dp),
+                ) {
+                    Text(formatPlaybackTime(currentTime), style = MaterialTheme.typography.bodySmall)
+                    Box(modifier = Modifier.weight(1f))
+                    Text(formatPlaybackTime(duration), style = MaterialTheme.typography.bodySmall)
+                }
+            } else {
+                Box(modifier = Modifier.height(44.dp))
+            }
+
             Row(
-                horizontalArrangement = Arrangement.Center,
-                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(24.dp, Alignment.CenterHorizontally),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
+                IconButton(onClick = { sharedAudioViewModel.playPrevious() }) {
+                    Icon(Icons.Default.SkipPrevious, contentDescription = "Previous", tint = Accent)
+                }
                 IconButton(
                     onClick = { sharedAudioViewModel.togglePlayback() },
-                    enabled = currentSurahNumber != null,
-                    modifier = Modifier.sizeIn(
-                        minWidth = 76.dp,
-                        minHeight = 76.dp,
-                    ),
+                    enabled = currentSurahNumber != null || !isLoading,
+                    modifier = Modifier.sizeIn(minWidth = 76.dp, minHeight = 76.dp),
                 ) {
                     Surface(
                         shape = RoundedCornerShape(38.dp),
@@ -147,22 +188,70 @@ fun AudioPlayerSheet(
                         modifier = Modifier.sizeIn(minWidth = 76.dp, minHeight = 76.dp),
                     ) {
                         Box(contentAlignment = Alignment.Center) {
-                            Icon(
-                                imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                                contentDescription = if (isPlaying) "Pause" else "Play",
-                                tint = Color.White,
-                            )
+                            if (isLoading) {
+                                CircularProgressIndicator(
+                                    color = Color.White,
+                                    modifier = Modifier.padding(16.dp),
+                                )
+                            } else {
+                                Icon(
+                                    imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                                    contentDescription = if (isPlaying) "Pause" else "Play",
+                                    tint = Color.White,
+                                )
+                            }
+                        }
+                    }
+                }
+                IconButton(onClick = { sharedAudioViewModel.playNext() }) {
+                    Icon(Icons.Default.SkipNext, contentDescription = "Next", tint = Accent)
+                }
+            }
+
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 28.dp),
+                shape = RoundedCornerShape(AppDimensions.cardCornerRadius),
+                color = MaterialTheme.colorScheme.surfaceVariant,
+            ) {
+                Row(
+                    modifier = Modifier.padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = if (isDownloaded) "Available offline" else "Streaming online",
+                        modifier = Modifier.weight(1f),
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                    TextButton(
+                        onClick = { sharedAudioViewModel.downloadSelectedSurah(displaySurahNumber) },
+                        enabled = !isDownloaded && !isDownloading,
+                    ) {
+                        if (isDownloading) {
+                            CircularProgressIndicator(modifier = Modifier.padding(4.dp))
+                        } else {
+                            Text(if (isDownloaded) "Downloaded" else "Download")
                         }
                     }
                 }
             }
 
-            Text(
-                text = "Streaming and offline download controls — M7",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 16.dp, bottom = 8.dp),
-            )
+            errorMessage?.let { message ->
+                Text(
+                    text = message,
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.padding(top = 8.dp, start = 28.dp, end = 28.dp),
+                    textAlign = TextAlign.Center,
+                )
+            }
         }
     }
+}
+
+private fun formatPlaybackTime(seconds: Double): String {
+    val total = seconds.toInt().coerceAtLeast(0)
+    val minutes = total / 60
+    val secs = total % 60
+    return "%d:%02d".format(minutes, secs)
 }

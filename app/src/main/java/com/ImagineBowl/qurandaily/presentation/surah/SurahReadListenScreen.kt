@@ -80,6 +80,17 @@ fun SurahReadListenScreen(
         onRecordRecentListen?.invoke(surah.number, surah.englishName, fromAyah)
     }
 
+    fun playAtAyah(fromAyah: Int) {
+        val surah = uiState.surah
+        sharedAudioViewModel.playSurah(
+            surahNumber = surah.number,
+            fromAyah = fromAyah,
+            totalAyahs = surah.numberOfAyahs,
+            stopsAtSurahEnd = true,
+        )
+        recordPlayback(fromAyah)
+    }
+
     val highlightedAyah =
         if (currentSurah == surahNumber) currentAyah else null
 
@@ -90,8 +101,7 @@ fun SurahReadListenScreen(
     LaunchedEffect(Unit) {
         detailViewModel.load()
         if (autoPlay) {
-            sharedAudioViewModel.playSurah(surahNumber, ayahNumber)
-            recordPlayback(ayahNumber)
+            playAtAyah(ayahNumber)
         }
     }
 
@@ -175,8 +185,7 @@ fun SurahReadListenScreen(
                             if (currentSurah == surahNumber) {
                                 sharedAudioViewModel.togglePlayback()
                             } else {
-                                sharedAudioViewModel.playSurah(surahNumber, ayahNumber)
-                                recordPlayback(ayahNumber)
+                                playAtAyah(ayahNumber)
                             }
                         },
                     ) {
@@ -252,10 +261,7 @@ fun SurahReadListenScreen(
                             isBookmarked = detailViewModel.isBookmarked(ayah),
                             isHighlighted = highlightedAyah == ayah.numberInSurah,
                             onBookmark = { detailViewModel.toggleBookmark(ayah) },
-                            onAyahTap = {
-                                sharedAudioViewModel.playSurah(surahNumber, ayah.numberInSurah)
-                                recordPlayback(ayah.numberInSurah)
-                            },
+                            onAyahTap = { playAtAyah(ayah.numberInSurah) },
                             modifier = Modifier.fillMaxWidth(),
                         )
                     }

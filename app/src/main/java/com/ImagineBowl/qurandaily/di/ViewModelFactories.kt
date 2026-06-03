@@ -106,11 +106,18 @@ class SurahDetailViewModelFactory(
     }
 }
 
-class SharedAudioViewModelFactory : ViewModelProvider.Factory {
+class SharedAudioViewModelFactory(
+    private val container: AppContainer,
+) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(SharedAudioViewModel::class.java)) {
-            return SharedAudioViewModel() as T
+            return SharedAudioViewModel(
+                appContext = container.appContext,
+                audioPlayer = container.audioPlayer,
+                audioRepository = container.audioRepository,
+                fetchQuranUseCase = container.fetchQuranUseCase,
+            ) as T
         }
         throw illegal(modelClass)
     }

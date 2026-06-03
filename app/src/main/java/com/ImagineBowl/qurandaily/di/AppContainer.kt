@@ -24,6 +24,7 @@ import com.imaginebowl.qurandaily.core.domain.usecase.DownloadQuranUseCase
 import com.imaginebowl.qurandaily.core.domain.usecase.FetchQuranUseCase
 import com.imaginebowl.qurandaily.core.domain.usecase.SearchQuranUseCase
 import com.imaginebowl.qurandaily.core.domain.usecase.StorageInfoUseCase
+import com.imaginebowl.qurandaily.data.audio.QuranAudioPlayer
 
 /**
  * Mirrors iOS `AppContainer` — manual constructor injection for production and tests.
@@ -34,6 +35,8 @@ class AppContainer(
     apiClientOverride: ApiClient? = null,
     downloadServiceOverride: DownloadService? = null,
 ) {
+    val appContext: Context = context.applicationContext
+
     val storageService: StorageService =
         storageOverride ?: JsonStorageService(context.filesDir.toPath())
 
@@ -80,4 +83,10 @@ class AppContainer(
 
     val clearCacheUseCase: ClearCacheUseCase =
         ClearCacheUseCase(quranRepository, audioRepository)
+
+    val audioPlayer: QuranAudioPlayer = QuranAudioPlayer(
+        context = appContext,
+        audioRepository = audioRepository,
+        fetchQuranUseCase = fetchQuranUseCase,
+    )
 }

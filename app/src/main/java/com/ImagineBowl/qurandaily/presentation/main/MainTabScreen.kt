@@ -52,7 +52,7 @@ fun MainTabScreen(
     val activity = LocalContext.current as ComponentActivity
     val sharedAudioViewModel: SharedAudioViewModel = viewModel(
         viewModelStoreOwner = activity,
-        factory = SharedAudioViewModelFactory(),
+        factory = SharedAudioViewModelFactory(container),
     )
     val settingsViewModel: SettingsViewModel = viewModel(
         viewModelStoreOwner = activity,
