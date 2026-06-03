@@ -26,6 +26,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.imaginebowl.qurandaily.di.AppContainer
 import com.imaginebowl.qurandaily.di.SharedAudioViewModelFactory
 import com.imaginebowl.qurandaily.presentation.audio.SharedAudioViewModel
+import com.imaginebowl.qurandaily.presentation.listen.ListenTabNavHost
 import com.imaginebowl.qurandaily.presentation.read.ReadTabNavHost
 import com.imaginebowl.qurandaily.ui.components.PlaceholderTabScreen
 
@@ -81,6 +82,11 @@ fun MainTabScreen(
         ) {
             when (tabs[selectedTab]) {
                 MainTab.Read -> ReadTabNavHost(
+                    container = container,
+                    sharedAudioViewModel = sharedAudioViewModel,
+                    modifier = Modifier.fillMaxSize(),
+                )
+                MainTab.Listen -> ListenTabNavHost(
                     container = container,
                     sharedAudioViewModel = sharedAudioViewModel,
                     modifier = Modifier.fillMaxSize(),
