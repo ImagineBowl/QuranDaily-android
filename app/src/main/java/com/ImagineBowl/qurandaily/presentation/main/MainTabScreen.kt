@@ -1,5 +1,6 @@
 package com.imaginebowl.qurandaily.presentation.main
 
+import androidx.activity.ComponentActivity
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -20,6 +21,12 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.imaginebowl.qurandaily.di.AppContainer
+import com.imaginebowl.qurandaily.di.SharedAudioViewModelFactory
+import com.imaginebowl.qurandaily.presentation.audio.SharedAudioViewModel
+import com.imaginebowl.qurandaily.presentation.read.ReadTabNavHost
 import com.imaginebowl.qurandaily.ui.components.PlaceholderTabScreen
 
 private enum class MainTab(val label: String) {
@@ -30,9 +37,17 @@ private enum class MainTab(val label: String) {
 }
 
 @Composable
-fun MainTabScreen(modifier: Modifier = Modifier) {
+fun MainTabScreen(
+    container: AppContainer,
+    modifier: Modifier = Modifier,
+) {
     var selectedTab by rememberSaveable { mutableIntStateOf(0) }
     val tabs = MainTab.entries
+    val activity = LocalContext.current as ComponentActivity
+    val sharedAudioViewModel: SharedAudioViewModel = viewModel(
+        viewModelStoreOwner = activity,
+        factory = SharedAudioViewModelFactory(),
+    )
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -63,9 +78,20 @@ fun MainTabScreen(modifier: Modifier = Modifier) {
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding),
-            contentAlignment = Alignment.Center,
         ) {
-            PlaceholderTabScreen(title = tabs[selectedTab].label)
+            when (tabs[selectedTab]) {
+                MainTab.Read -> ReadTabNavHost(
+                    container = container,
+                    sharedAudioViewModel = sharedAudioViewModel,
+                    modifier = Modifier.fillMaxSize(),
+                )
+                else -> Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    PlaceholderTabScreen(title = tabs[selectedTab].label)
+                }
+            }
         }
     }
 }

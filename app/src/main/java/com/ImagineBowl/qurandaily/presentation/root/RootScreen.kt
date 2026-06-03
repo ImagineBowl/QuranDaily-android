@@ -13,7 +13,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.imaginebowl.qurandaily.di.AppContainerOwner
 import com.imaginebowl.qurandaily.presentation.download.DownloadScreen
 import com.imaginebowl.qurandaily.presentation.download.DownloadViewModel
-import com.imaginebowl.qurandaily.presentation.download.DownloadViewModelFactory
+import com.imaginebowl.qurandaily.di.DownloadViewModelFactory
 import com.imaginebowl.qurandaily.presentation.main.MainTabScreen
 
 @Composable
@@ -36,7 +36,7 @@ fun RootScreen(modifier: Modifier = Modifier) {
     }
 
     if (isReady || uiState.isDownloaded) {
-        MainTabScreen(modifier = modifier)
+        MainTabScreen(container = container, modifier = modifier)
     } else {
         DownloadScreen(viewModel = downloadViewModel, modifier = modifier)
     }
