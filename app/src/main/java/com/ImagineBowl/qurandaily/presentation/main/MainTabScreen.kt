@@ -19,16 +19,20 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.imaginebowl.qurandaily.di.AppContainer
+import com.imaginebowl.qurandaily.core.domain.model.AppThemeMode
+import com.imaginebowl.qurandaily.di.SettingsViewModelFactory
 import com.imaginebowl.qurandaily.di.SharedAudioViewModelFactory
+import com.imaginebowl.qurandaily.presentation.bookmarks.BookmarksTabNavHost
+import com.imaginebowl.qurandaily.presentation.settings.SettingsScreen
+import com.imaginebowl.qurandaily.presentation.settings.SettingsViewModel
 import com.imaginebowl.qurandaily.presentation.audio.SharedAudioViewModel
 import com.imaginebowl.qurandaily.presentation.listen.ListenTabNavHost
 import com.imaginebowl.qurandaily.presentation.read.ReadTabNavHost
-import com.imaginebowl.qurandaily.ui.components.PlaceholderTabScreen
+import androidx.compose.runtime.LaunchedEffect
 
 private enum class MainTab(val label: String) {
     Read("Read"),
@@ -40,6 +44,7 @@ private enum class MainTab(val label: String) {
 @Composable
 fun MainTabScreen(
     container: AppContainer,
+    onThemeChanged: (AppThemeMode) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var selectedTab by rememberSaveable { mutableIntStateOf(0) }
@@ -49,6 +54,14 @@ fun MainTabScreen(
         viewModelStoreOwner = activity,
         factory = SharedAudioViewModelFactory(),
     )
+    val settingsViewModel: SettingsViewModel = viewModel(
+        viewModelStoreOwner = activity,
+        factory = SettingsViewModelFactory(container),
+    )
+
+    LaunchedEffect(onThemeChanged) {
+        settingsViewModel.onThemeChanged = onThemeChanged
+    }
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -91,12 +104,15 @@ fun MainTabScreen(
                     sharedAudioViewModel = sharedAudioViewModel,
                     modifier = Modifier.fillMaxSize(),
                 )
-                else -> Box(
+                MainTab.Bookmarks -> BookmarksTabNavHost(
+                    container = container,
+                    sharedAudioViewModel = sharedAudioViewModel,
                     modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    PlaceholderTabScreen(title = tabs[selectedTab].label)
-                }
+                )
+                MainTab.Settings -> SettingsScreen(
+                    viewModel = settingsViewModel,
+                    modifier = Modifier.fillMaxSize(),
+                )
             }
         }
     }

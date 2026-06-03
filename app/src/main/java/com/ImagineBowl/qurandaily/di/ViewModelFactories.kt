@@ -5,7 +5,9 @@ import androidx.lifecycle.ViewModelProvider
 import com.imaginebowl.qurandaily.core.domain.model.Surah
 import com.imaginebowl.qurandaily.presentation.audio.SharedAudioViewModel
 import com.imaginebowl.qurandaily.presentation.download.DownloadViewModel
+import com.imaginebowl.qurandaily.presentation.bookmarks.BookmarksViewModel
 import com.imaginebowl.qurandaily.presentation.listen.ListenViewModel
+import com.imaginebowl.qurandaily.presentation.settings.SettingsViewModel
 import com.imaginebowl.qurandaily.presentation.read.QuranViewModel
 import com.imaginebowl.qurandaily.presentation.surah.SurahDetailViewModel
 
@@ -18,6 +20,34 @@ class DownloadViewModelFactory(
             return DownloadViewModel(
                 container.downloadQuranUseCase,
                 container.fetchQuranUseCase,
+            ) as T
+        }
+        throw illegal(modelClass)
+    }
+}
+
+class BookmarksViewModelFactory(
+    private val container: AppContainer,
+) : ViewModelProvider.Factory {
+    @Suppress("UNCHECKED_CAST")
+    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+        if (modelClass.isAssignableFrom(BookmarksViewModel::class.java)) {
+            return BookmarksViewModel(container.bookmarkRepository) as T
+        }
+        throw illegal(modelClass)
+    }
+}
+
+class SettingsViewModelFactory(
+    private val container: AppContainer,
+) : ViewModelProvider.Factory {
+    @Suppress("UNCHECKED_CAST")
+    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+        if (modelClass.isAssignableFrom(SettingsViewModel::class.java)) {
+            return SettingsViewModel(
+                container.settingsRepository,
+                container.storageInfoUseCase,
+                container.clearCacheUseCase,
             ) as T
         }
         throw illegal(modelClass)

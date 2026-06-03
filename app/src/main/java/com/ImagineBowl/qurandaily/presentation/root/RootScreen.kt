@@ -14,10 +14,14 @@ import com.imaginebowl.qurandaily.di.AppContainerOwner
 import com.imaginebowl.qurandaily.presentation.download.DownloadScreen
 import com.imaginebowl.qurandaily.presentation.download.DownloadViewModel
 import com.imaginebowl.qurandaily.di.DownloadViewModelFactory
+import com.imaginebowl.qurandaily.core.domain.model.AppThemeMode
 import com.imaginebowl.qurandaily.presentation.main.MainTabScreen
 
 @Composable
-fun RootScreen(modifier: Modifier = Modifier) {
+fun RootScreen(
+    onThemeChanged: (AppThemeMode) -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val container = (LocalContext.current.applicationContext as AppContainerOwner).appContainer
     val downloadViewModel: DownloadViewModel = viewModel(
         factory = DownloadViewModelFactory(container),
@@ -36,7 +40,11 @@ fun RootScreen(modifier: Modifier = Modifier) {
     }
 
     if (isReady || uiState.isDownloaded) {
-        MainTabScreen(container = container, modifier = modifier)
+        MainTabScreen(
+            container = container,
+            onThemeChanged = onThemeChanged,
+            modifier = modifier,
+        )
     } else {
         DownloadScreen(viewModel = downloadViewModel, modifier = modifier)
     }
