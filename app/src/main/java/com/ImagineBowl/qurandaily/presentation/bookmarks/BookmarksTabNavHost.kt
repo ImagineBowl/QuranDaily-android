@@ -23,6 +23,8 @@ import com.imaginebowl.qurandaily.di.QuranViewModelFactory
 import com.imaginebowl.qurandaily.di.SurahDetailViewModelFactory
 import com.imaginebowl.qurandaily.navigation.Routes
 import com.imaginebowl.qurandaily.presentation.audio.SharedAudioViewModel
+import com.imaginebowl.qurandaily.presentation.main.TabChromeViewModel
+import androidx.compose.runtime.DisposableEffect
 import com.imaginebowl.qurandaily.presentation.read.QuranViewModel
 import com.imaginebowl.qurandaily.presentation.surah.SurahDetailViewModel
 import com.imaginebowl.qurandaily.presentation.surah.SurahReadListenScreen
@@ -32,6 +34,7 @@ import com.imaginebowl.qurandaily.ui.theme.Accent
 fun BookmarksTabNavHost(
     container: AppContainer,
     sharedAudioViewModel: SharedAudioViewModel,
+    tabChromeViewModel: TabChromeViewModel,
     modifier: Modifier = Modifier,
 ) {
     val navController = rememberNavController()
@@ -86,6 +89,11 @@ fun BookmarksTabNavHost(
             val detailViewModel: SurahDetailViewModel = viewModel(
                 factory = SurahDetailViewModelFactory(container, surah, ayahNumber),
             )
+
+            DisposableEffect(Unit) {
+                tabChromeViewModel.setHideBottomBar(true)
+                onDispose { tabChromeViewModel.setHideBottomBar(false) }
+            }
 
             SurahReadListenScreen(
                 surahNumber = surahNumber,

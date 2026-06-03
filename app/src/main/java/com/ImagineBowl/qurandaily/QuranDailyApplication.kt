@@ -12,4 +12,9 @@ class QuranDailyApplication : Application(), AppContainerOwner {
         super.onCreate()
         appContainer = AppContainer(this)
     }
+
+    override fun onTerminate() {
+        appContainer.tipJarService.destroy()
+        super.onTerminate()
+    }
 }

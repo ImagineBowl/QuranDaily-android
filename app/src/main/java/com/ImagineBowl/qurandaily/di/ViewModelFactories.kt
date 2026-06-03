@@ -48,6 +48,7 @@ class SettingsViewModelFactory(
                 container.settingsRepository,
                 container.storageInfoUseCase,
                 container.clearCacheUseCase,
+                container.tipJarService,
             ) as T
         }
         throw illegal(modelClass)

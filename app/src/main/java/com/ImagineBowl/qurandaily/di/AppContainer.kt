@@ -25,6 +25,8 @@ import com.imaginebowl.qurandaily.core.domain.usecase.FetchQuranUseCase
 import com.imaginebowl.qurandaily.core.domain.usecase.SearchQuranUseCase
 import com.imaginebowl.qurandaily.core.domain.usecase.StorageInfoUseCase
 import com.imaginebowl.qurandaily.data.audio.QuranAudioPlayer
+import com.imaginebowl.qurandaily.data.billing.PlayTipJarService
+import com.imaginebowl.qurandaily.data.billing.TipJarService
 
 /**
  * Mirrors iOS `AppContainer` — manual constructor injection for production and tests.
@@ -89,4 +91,6 @@ class AppContainer(
         audioRepository = audioRepository,
         fetchQuranUseCase = fetchQuranUseCase,
     )
+
+    val tipJarService: TipJarService = PlayTipJarService(appContext)
 }

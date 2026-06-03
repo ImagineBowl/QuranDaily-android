@@ -258,6 +258,8 @@ fun SurahReadListenScreen(
                         AyahCard(
                             ayah = ayah,
                             fontSize = uiState.settings.fontSize,
+                            arabicFont = uiState.settings.arabicFont,
+                            urduFont = uiState.settings.urduFont,
                             isBookmarked = detailViewModel.isBookmarked(ayah),
                             isHighlighted = highlightedAyah == ayah.numberInSurah,
                             onBookmark = { detailViewModel.toggleBookmark(ayah) },

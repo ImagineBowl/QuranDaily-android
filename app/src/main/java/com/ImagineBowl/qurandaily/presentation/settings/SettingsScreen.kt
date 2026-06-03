@@ -24,9 +24,12 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.activity.ComponentActivity
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -34,6 +37,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.imaginebowl.qurandaily.core.domain.model.AppThemeMode
+import com.imaginebowl.qurandaily.data.billing.TipProduct
 import com.imaginebowl.qurandaily.core.domain.model.ArabicFontChoice
 import com.imaginebowl.qurandaily.core.domain.model.UrduFontChoice
 import com.imaginebowl.qurandaily.ui.theme.Accent
@@ -48,6 +52,12 @@ fun SettingsScreen(
     modifier: Modifier = Modifier,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val activity = LocalContext.current as ComponentActivity
+
+    DisposableEffect(activity) {
+        viewModel.attachPurchaseHost(activity)
+        onDispose { viewModel.detachPurchaseHost() }
+    }
 
     LaunchedEffect(Unit) {
         viewModel.load()
@@ -137,17 +147,24 @@ fun SettingsScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 14.sp,
                 )
+                uiState.tipsUnavailableReason?.let { reason ->
+                    Text(
+                        text = reason,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontSize = 14.sp,
+                    )
+                }
                 if (uiState.tipOptions.isEmpty()) {
                     Text(
                         text = "Tip options are unavailable right now.",
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 } else {
-                    uiState.tipOptions.forEach { option ->
+                    uiState.tipOptions.forEach { product ->
                         TipRow(
-                            option = option,
+                            product = product,
                             enabled = !uiState.isPurchasing,
-                            onClick = { viewModel.tip(option) },
+                            onClick = { viewModel.tip(product) },
                         )
                     }
                 }
@@ -263,7 +280,7 @@ private fun <T> FontPickerRow(
 
 @Composable
 private fun TipRow(
-    option: TipOption,
+    product: TipProduct,
     enabled: Boolean,
     onClick: () -> Unit,
 ) {
@@ -288,7 +305,7 @@ private fun TipRow(
                 tint = Accent,
             )
             Text(
-                text = option.displayName,
+                text = product.displayName,
                 modifier = Modifier
                     .weight(1f)
                     .padding(horizontal = 12.dp),
@@ -298,7 +315,7 @@ private fun TipRow(
                 shape = RoundedCornerShape(16.dp),
             ) {
                 Text(
-                    text = option.displayPrice,
+                    text = product.formattedPrice,
                     modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
                     color = Accent,
                     fontWeight = FontWeight.SemiBold,

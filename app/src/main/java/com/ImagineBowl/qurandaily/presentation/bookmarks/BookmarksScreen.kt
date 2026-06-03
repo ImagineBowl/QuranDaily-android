@@ -33,8 +33,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.imaginebowl.qurandaily.core.domain.model.ArabicFontChoice
 import com.imaginebowl.qurandaily.core.domain.model.Bookmark
 import com.imaginebowl.qurandaily.ui.theme.Accent
+import com.imaginebowl.qurandaily.ui.theme.arabicTextStyle
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -190,7 +192,7 @@ private fun BookmarkRow(
             if (bookmark.arabicPreview.isNotEmpty()) {
                 Text(
                     text = bookmark.arabicPreview,
-                    fontSize = 20.sp,
+                    style = arabicTextStyle(ArabicFontChoice.AMIRI_QURAN, 20.0),
                     textAlign = TextAlign.End,
                     modifier = Modifier
                         .fillMaxWidth()

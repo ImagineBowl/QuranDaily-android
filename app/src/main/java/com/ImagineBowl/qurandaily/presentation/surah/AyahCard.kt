@@ -21,14 +21,20 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.imaginebowl.qurandaily.core.domain.model.ArabicFontChoice
 import com.imaginebowl.qurandaily.core.domain.model.Ayah
+import com.imaginebowl.qurandaily.core.domain.model.UrduFontChoice
 import com.imaginebowl.qurandaily.ui.theme.Accent
 import com.imaginebowl.qurandaily.ui.theme.AppDimensions
+import com.imaginebowl.qurandaily.ui.theme.arabicTextStyle
+import com.imaginebowl.qurandaily.ui.theme.urduTextStyle
 
 @Composable
 fun AyahCard(
     ayah: Ayah,
     fontSize: Double,
+    arabicFont: ArabicFontChoice = ArabicFontChoice.AMIRI_QURAN,
+    urduFont: UrduFontChoice = UrduFontChoice.NOTO_NASTALIQ,
     isBookmarked: Boolean,
     isHighlighted: Boolean,
     onBookmark: () -> Unit,
@@ -69,8 +75,7 @@ fun AyahCard(
             }
             Text(
                 text = ayah.arabicText,
-                fontSize = (fontSize + 4).sp,
-                lineHeight = (fontSize + 14).sp,
+                style = arabicTextStyle(arabicFont, fontSize),
                 textAlign = TextAlign.End,
                 modifier = Modifier
                     .fillMaxWidth()
@@ -78,8 +83,7 @@ fun AyahCard(
             )
             Text(
                 text = ayah.urduText,
-                fontSize = fontSize.sp,
-                lineHeight = (fontSize + 8).sp,
+                style = urduTextStyle(urduFont, fontSize),
                 modifier = Modifier.fillMaxWidth(),
             )
         }

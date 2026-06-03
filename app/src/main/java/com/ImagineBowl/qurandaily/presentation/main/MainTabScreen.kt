@@ -33,6 +33,7 @@ import com.imaginebowl.qurandaily.presentation.audio.SharedAudioViewModel
 import com.imaginebowl.qurandaily.presentation.listen.ListenTabNavHost
 import com.imaginebowl.qurandaily.presentation.read.ReadTabNavHost
 import androidx.compose.runtime.LaunchedEffect
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 private enum class MainTab(val label: String) {
     Read("Read"),
@@ -59,13 +60,21 @@ fun MainTabScreen(
         factory = SettingsViewModelFactory(container),
     )
 
+    val tabChromeViewModel: TabChromeViewModel = viewModel(viewModelStoreOwner = activity)
+    val hideBottomBar by tabChromeViewModel.hideBottomBar.collectAsStateWithLifecycle()
+
     LaunchedEffect(onThemeChanged) {
         settingsViewModel.onThemeChanged = onThemeChanged
+    }
+
+    LaunchedEffect(selectedTab) {
+        tabChromeViewModel.setHideBottomBar(false)
     }
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
         bottomBar = {
+            if (!hideBottomBar) {
             NavigationBar {
                 tabs.forEachIndexed { index, tab ->
                     NavigationBarItem(
@@ -86,6 +95,7 @@ fun MainTabScreen(
                     )
                 }
             }
+            }
         },
     ) { padding ->
         Box(
@@ -97,16 +107,19 @@ fun MainTabScreen(
                 MainTab.Read -> ReadTabNavHost(
                     container = container,
                     sharedAudioViewModel = sharedAudioViewModel,
+                    tabChromeViewModel = tabChromeViewModel,
                     modifier = Modifier.fillMaxSize(),
                 )
                 MainTab.Listen -> ListenTabNavHost(
                     container = container,
                     sharedAudioViewModel = sharedAudioViewModel,
+                    tabChromeViewModel = tabChromeViewModel,
                     modifier = Modifier.fillMaxSize(),
                 )
                 MainTab.Bookmarks -> BookmarksTabNavHost(
                     container = container,
                     sharedAudioViewModel = sharedAudioViewModel,
+                    tabChromeViewModel = tabChromeViewModel,
                     modifier = Modifier.fillMaxSize(),
                 )
                 MainTab.Settings -> SettingsScreen(
