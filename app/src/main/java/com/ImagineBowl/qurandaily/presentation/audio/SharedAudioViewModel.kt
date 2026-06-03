@@ -2,6 +2,7 @@ package com.imaginebowl.qurandaily.presentation.audio
 
 import android.content.Context
 import android.content.Intent
+import android.util.Log
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -39,6 +40,10 @@ class SharedAudioViewModel(
     private val _currentTime = MutableStateFlow(0.0)
     val currentTime: StateFlow<Double> = _currentTime.asStateFlow()
 
+    /** Smooth UI position — interpolated between ExoPlayer sync ticks (~60fps). */
+    private val _displayTime = MutableStateFlow(0.0)
+    val displayTime: StateFlow<Double> = _displayTime.asStateFlow()
+
     private val _duration = MutableStateFlow(0.0)
     val duration: StateFlow<Double> = _duration.asStateFlow()
 
@@ -59,7 +64,15 @@ class SharedAudioViewModel(
 
     private var previewJob: Job? = null
     private var progressJob: Job? = null
+    private var syncJob: Job? = null
     private var lastPreviewKey: String? = null
+    private var progressAnchor = ProgressAnchor()
+
+    private data class ProgressAnchor(
+        val positionSec: Double = 0.0,
+        val durationSec: Double = 0.0,
+        val wallClockMs: Long = 0L,
+    )
 
     val showMiniPlayer: Boolean
         get() = _currentSurahNumber.value != null || _isLoadingAudio.value
@@ -72,12 +85,11 @@ class SharedAudioViewModel(
         }
 
     init {
-        audioPlayer.onPlaybackUpdate = { syncFromPlayer() }
         viewModelScope.launch {
             _downloadedSurahs.value = audioRepository.downloadedSurahNumbers().toSet()
         }
         viewModelScope.launch {
-            audioPlayer.snapshot.collect { syncFromPlayer() }
+            audioPlayer.snapshot.collect { applySnapshotFromPlayer() }
         }
     }
 
@@ -158,6 +170,11 @@ class SharedAudioViewModel(
     }
 
     private fun syncFromPlayer() {
+        audioPlayer.refreshSnapshot()
+        applySnapshotFromPlayer()
+    }
+
+    private fun applySnapshotFromPlayer() {
         val snap = audioPlayer.snapshot.value
         _currentSurahNumber.value = snap.currentSurahNumber
         _currentAyahInSurah.value = snap.currentAyahInSurah
@@ -166,6 +183,12 @@ class SharedAudioViewModel(
         _currentTime.value = snap.currentTimeSec
         _duration.value = snap.durationSec
         _audioErrorMessage.value = snap.errorMessage
+        progressAnchor = ProgressAnchor(
+            positionSec = snap.currentTimeSec,
+            durationSec = snap.durationSec,
+            wallClockMs = System.currentTimeMillis(),
+        )
+        _displayTime.value = snap.currentTimeSec
 
         snap.currentSurahNumber?.let { _selectedSurahNumber.value = it }
         refreshAyahPreview()
@@ -192,32 +215,64 @@ class SharedAudioViewModel(
     }
 
     private fun updateProgressPolling() {
-        if (_isPlaying.value) {
-            if (progressJob?.isActive == true) return
-            progressJob = viewModelScope.launch {
-                while (isActive && _isPlaying.value) {
-                    syncFromPlayer()
-                    delay(300)
+        val hasActivePlayback = _currentSurahNumber.value != null
+        if (hasActivePlayback && _isPlaying.value) {
+            if (progressJob?.isActive != true) {
+                progressJob = viewModelScope.launch {
+                    while (isActive && _currentSurahNumber.value != null && _isPlaying.value) {
+                        tickDisplayTime()
+                        delay(200)
+                    }
+                }
+            }
+            if (syncJob?.isActive != true) {
+                syncJob = viewModelScope.launch {
+                    while (isActive && _currentSurahNumber.value != null && _isPlaying.value) {
+                        syncFromPlayer()
+                        delay(500)
+                    }
                 }
             }
         } else {
             progressJob?.cancel()
             progressJob = null
+            syncJob?.cancel()
+            syncJob = null
+            _displayTime.value = _currentTime.value
         }
     }
 
+    private fun tickDisplayTime() {
+        val anchor = progressAnchor
+        if (!_isPlaying.value || anchor.durationSec <= 0) {
+            _displayTime.value = _currentTime.value
+            return
+        }
+        val elapsedSec = (System.currentTimeMillis() - anchor.wallClockMs) / 1000.0
+        val extrapolated = (anchor.positionSec + elapsedSec)
+            .coerceIn(0.0, anchor.durationSec)
+        _displayTime.value = extrapolated
+    }
+
     private fun startPlaybackService() {
-        val intent = Intent(appContext, QuranPlaybackService::class.java)
-        ContextCompat.startForegroundService(appContext, intent)
+        try {
+            val intent = Intent(appContext, QuranPlaybackService::class.java)
+            ContextCompat.startForegroundService(appContext, intent)
+        } catch (error: Exception) {
+            Log.e(TAG, "Could not start playback foreground service", error)
+        }
     }
 
     override fun onCleared() {
         previewJob?.cancel()
         progressJob?.cancel()
+        syncJob?.cancel()
         super.onCleared()
     }
 
     companion object {
+        private const val TAG = "SharedAudioViewModel"
+
         private fun truncatedPreview(text: String, maxLength: Int = 72): String {
             val trimmed = text.trim()
             return if (trimmed.length <= maxLength) trimmed else trimmed.take(maxLength) + "…"

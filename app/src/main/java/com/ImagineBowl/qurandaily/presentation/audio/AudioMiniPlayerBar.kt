@@ -39,13 +39,13 @@ fun AudioMiniPlayerBar(
     val currentAyah by sharedAudioViewModel.currentAyahInSurah.collectAsStateWithLifecycle()
     val isPlaying by sharedAudioViewModel.isPlaying.collectAsStateWithLifecycle()
     val isLoading by sharedAudioViewModel.isLoadingAudio.collectAsStateWithLifecycle()
-    val currentTime by sharedAudioViewModel.currentTime.collectAsStateWithLifecycle()
+    val displayTime by sharedAudioViewModel.displayTime.collectAsStateWithLifecycle()
     val duration by sharedAudioViewModel.duration.collectAsStateWithLifecycle()
 
     val surah = surahs.firstOrNull { it.number == currentSurah } ?: return
 
     val progress = if (duration > 0) {
-        (currentTime / duration).toFloat().coerceIn(0f, 1f)
+        (displayTime / duration).toFloat().coerceIn(0f, 1f)
     } else {
         0f
     }

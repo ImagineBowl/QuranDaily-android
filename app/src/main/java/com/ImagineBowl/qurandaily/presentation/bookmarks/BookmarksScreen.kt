@@ -35,6 +35,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.imaginebowl.qurandaily.core.domain.model.ArabicFontChoice
 import com.imaginebowl.qurandaily.core.domain.model.Bookmark
+import com.imaginebowl.qurandaily.ui.layout.TabContentWindowInsets
 import com.imaginebowl.qurandaily.ui.theme.Accent
 import com.imaginebowl.qurandaily.ui.theme.arabicTextStyle
 
@@ -53,6 +54,7 @@ fun BookmarksScreen(
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
+        contentWindowInsets = TabContentWindowInsets,
         topBar = {
             TopAppBar(
                 title = { Text("Bookmarks") },

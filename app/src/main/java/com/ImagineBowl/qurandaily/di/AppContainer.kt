@@ -89,7 +89,6 @@ class AppContainer(
     val audioPlayer: QuranAudioPlayer = QuranAudioPlayer(
         context = appContext,
         audioRepository = audioRepository,
-        fetchQuranUseCase = fetchQuranUseCase,
     )
 
     val tipJarService: TipJarService = PlayTipJarService(appContext)

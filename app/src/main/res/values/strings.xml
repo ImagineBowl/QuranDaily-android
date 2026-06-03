@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">QuranDaily</string>
+    <string name="playback_notification_channel_name">Quran playback</string>
+    <string name="playback_notification_message">Playing audio</string>
 </resources>

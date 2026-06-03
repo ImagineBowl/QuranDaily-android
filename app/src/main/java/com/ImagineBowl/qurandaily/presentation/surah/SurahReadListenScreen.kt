@@ -37,10 +37,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.imaginebowl.qurandaily.core.domain.model.Surah
-import com.imaginebowl.qurandaily.presentation.audio.AudioMiniPlayerBar
-import com.imaginebowl.qurandaily.presentation.audio.AudioPlayerSheet
 import com.imaginebowl.qurandaily.presentation.audio.SharedAudioViewModel
+import com.imaginebowl.qurandaily.ui.layout.TabContentWindowInsets
 import com.imaginebowl.qurandaily.ui.theme.Accent
 import com.imaginebowl.qurandaily.ui.theme.AppDimensions
 import kotlinx.coroutines.delay
@@ -60,7 +58,6 @@ fun SurahReadListenScreen(
     tracksReadingPosition: Boolean = true,
     tracksRecentListens: Boolean = false,
     onRecordRecentListen: ((surahNumber: Int, surahName: String, ayahNumber: Int) -> Unit)? = null,
-    surahsForPlayer: List<Surah> = emptyList(),
 ) {
     val uiState by detailViewModel.uiState.collectAsStateWithLifecycle()
     val currentSurah by sharedAudioViewModel.currentSurahNumber.collectAsStateWithLifecycle()
@@ -72,8 +69,6 @@ fun SurahReadListenScreen(
     var visibleAyahs by remember { mutableStateOf(setOf<Int>()) }
     var didScrollToInitial by remember { mutableStateOf(false) }
     var trackedAyah by remember { mutableIntStateOf(ayahNumber) }
-    var showAudioSheet by remember { mutableStateOf(false) }
-
     fun recordPlayback(fromAyah: Int) {
         if (!tracksRecentListens) return
         val surah = uiState.surah
@@ -161,16 +156,9 @@ fun SurahReadListenScreen(
         }
     }
 
-    if (showAudioSheet && surahsForPlayer.isNotEmpty()) {
-        AudioPlayerSheet(
-            sharedAudioViewModel = sharedAudioViewModel,
-            surahs = surahsForPlayer,
-            onDismiss = { showAudioSheet = false },
-        )
-    }
-
     Scaffold(
         modifier = modifier.fillMaxSize(),
+        contentWindowInsets = TabContentWindowInsets,
         topBar = {
             TopAppBar(
                 title = { Text(uiState.surah.englishName) },
@@ -200,15 +188,6 @@ fun SurahReadListenScreen(
                     }
                 },
             )
-        },
-        bottomBar = {
-            if (surahsForPlayer.isNotEmpty() && sharedAudioViewModel.showMiniPlayer) {
-                AudioMiniPlayerBar(
-                    sharedAudioViewModel = sharedAudioViewModel,
-                    surahs = surahsForPlayer,
-                    onOpenFullPlayer = { showAudioSheet = true },
-                )
-            }
         },
         floatingActionButton = {
             if (showJumpToPlaying && highlightedAyah != null) {

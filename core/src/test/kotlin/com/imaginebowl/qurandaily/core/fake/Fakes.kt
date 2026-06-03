@@ -36,7 +36,14 @@ class FakeStorageService(
         files[filename] = data
     }
 
-    override suspend fun loadBytes(filename: String): ByteArray? = files[filename]
+    var quranBundleLoadCount: Int = 0
+
+    override suspend fun loadBytes(filename: String): ByteArray? {
+        if (filename == com.imaginebowl.qurandaily.core.domain.model.StoragePaths.QURAN_BUNDLE) {
+            quranBundleLoadCount++
+        }
+        return files[filename]
+    }
 
     override suspend fun fileExists(filename: String): Boolean = files.containsKey(filename)
 

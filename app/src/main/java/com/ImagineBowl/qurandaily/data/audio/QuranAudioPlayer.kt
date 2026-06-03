@@ -5,17 +5,18 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import com.imaginebowl.qurandaily.core.domain.repository.AudioRepository
-import com.imaginebowl.qurandaily.core.domain.usecase.FetchQuranUseCase
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 data class QuranPlaybackSnapshot(
     val currentSurahNumber: Int? = null,
@@ -29,14 +30,15 @@ data class QuranPlaybackSnapshot(
 
 /**
  * Single shared ExoPlayer instance — mirrors iOS [AudioPlayerService].
+ * Playback transitions are serialized so rapid ayah changes cannot race [ExoPlayer].
  */
 class QuranAudioPlayer(
     context: Context,
     private val audioRepository: AudioRepository,
-    private val fetchQuranUseCase: FetchQuranUseCase,
 ) {
     private val appContext = context.applicationContext
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+    private val playbackMutex = Mutex()
 
     val player: ExoPlayer = ExoPlayer.Builder(appContext).build()
 
@@ -57,6 +59,14 @@ class QuranAudioPlayer(
         }
 
         override fun onIsPlayingChanged(isPlaying: Boolean) {
+            syncFromPlayer()
+        }
+
+        override fun onPositionDiscontinuity(
+            oldPosition: Player.PositionInfo,
+            newPosition: Player.PositionInfo,
+            reason: Int,
+        ) {
             syncFromPlayer()
         }
     }
@@ -82,12 +92,11 @@ class QuranAudioPlayer(
     }
 
     fun stop() {
-        player.stop()
-        player.clearMediaItems()
-        ayahSequenceEnd = null
-        stopsAtSurahEnd = false
-        _snapshot.value = QuranPlaybackSnapshot()
-        notifyUpdate()
+        scope.launch {
+            playbackMutex.withLock {
+                stopPlayerLocked()
+            }
+        }
     }
 
     fun playSurahAyah(
@@ -97,78 +106,73 @@ class QuranAudioPlayer(
         stopsAtSurahEnd: Boolean = true,
     ) {
         scope.launch {
-            _snapshot.update { it.copy(isLoading = true, errorMessage = null) }
-            try {
-                this@QuranAudioPlayer.stopsAtSurahEnd = stopsAtSurahEnd
-                val uri = withContext(Dispatchers.IO) {
-                    audioRepository.ayahStreamingUri(surahNumber, fromAyah)
+            playbackMutex.withLock {
+                _snapshot.update { it.copy(isLoading = true, errorMessage = null) }
+                try {
+                    this@QuranAudioPlayer.stopsAtSurahEnd = stopsAtSurahEnd
+                    val uri = withContext(Dispatchers.IO) {
+                        audioRepository.ayahStreamingUri(surahNumber, fromAyah)
+                    }
+                    startPlaybackLocked(
+                        uri = uri.toString(),
+                        surahNumber = surahNumber,
+                        ayahInSurah = fromAyah,
+                        sequenceEnd = totalAyahs,
+                    )
+                } catch (e: Exception) {
+                    _snapshot.update {
+                        it.copy(isLoading = false, errorMessage = e.message ?: "Playback failed")
+                    }
+                    notifyUpdate()
                 }
-                startPlayback(
-                    uri = uri.toString(),
-                    surahNumber = surahNumber,
-                    ayahInSurah = fromAyah,
-                    sequenceEnd = totalAyahs,
-                )
-            } catch (e: Exception) {
-                _snapshot.update {
-                    it.copy(isLoading = false, errorMessage = e.message ?: "Playback failed")
-                }
-                notifyUpdate()
             }
         }
     }
 
     fun playNext(totalAyahsForCurrentSurah: Int?) {
         scope.launch {
-            val state = _snapshot.value
-            val surah = state.currentSurahNumber ?: return@launch
-            val ayah = state.currentAyahInSurah ?: return@launch
-            val end = ayahSequenceEnd
-            if (end != null && ayah < end) {
-                playSurahAyah(surah, ayah + 1, end, stopsAtSurahEnd)
-                return@launch
+            playbackMutex.withLock {
+                val state = _snapshot.value
+                val surah = state.currentSurahNumber ?: return@withLock
+                val ayah = state.currentAyahInSurah ?: return@withLock
+                val end = ayahSequenceEnd
+                if (end != null && ayah < end) {
+                    playSurahAyahLocked(surah, ayah + 1, end, stopsAtSurahEnd)
+                    return@withLock
+                }
+                val nextSurah = (surah + 1).coerceAtMost(114)
+                playFullSurahLocked(nextSurah, stopsAtSurahEnd = false)
             }
-            val nextSurah = (surah + 1).coerceAtMost(114)
-            playFullSurah(nextSurah, stopsAtSurahEnd = false)
         }
     }
 
     fun playPrevious() {
         scope.launch {
-            val state = _snapshot.value
-            val surah = state.currentSurahNumber ?: return@launch
-            val ayah = state.currentAyahInSurah ?: return@launch
-            val end = ayahSequenceEnd
-            if (end != null && ayah > 1) {
-                playSurahAyah(surah, ayah - 1, end, stopsAtSurahEnd)
-                return@launch
+            playbackMutex.withLock {
+                val state = _snapshot.value
+                val surah = state.currentSurahNumber ?: return@withLock
+                val ayah = state.currentAyahInSurah ?: return@withLock
+                val end = ayahSequenceEnd
+                if (end != null && ayah > 1) {
+                    playSurahAyahLocked(surah, ayah - 1, end, stopsAtSurahEnd)
+                    return@withLock
+                }
+                val previousSurah = (surah - 1).coerceAtLeast(1)
+                playFullSurahLocked(previousSurah, stopsAtSurahEnd = false)
             }
-            val previousSurah = (surah - 1).coerceAtLeast(1)
-            playFullSurah(previousSurah, stopsAtSurahEnd = false)
         }
     }
 
     fun playFullSurah(surahNumber: Int, stopsAtSurahEnd: Boolean = false) {
         scope.launch {
-            _snapshot.update { it.copy(isLoading = true, errorMessage = null) }
-            try {
-                this@QuranAudioPlayer.stopsAtSurahEnd = stopsAtSurahEnd
-                val uri = withContext(Dispatchers.IO) {
-                    audioRepository.playbackUri(surahNumber)
-                }
-                startPlayback(
-                    uri = uri.toString(),
-                    surahNumber = surahNumber,
-                    ayahInSurah = null,
-                    sequenceEnd = null,
-                )
-            } catch (e: Exception) {
-                _snapshot.update {
-                    it.copy(isLoading = false, errorMessage = e.message ?: "Playback failed")
-                }
-                notifyUpdate()
+            playbackMutex.withLock {
+                playFullSurahLocked(surahNumber, stopsAtSurahEnd)
             }
         }
+    }
+
+    fun refreshSnapshot() {
+        syncFromPlayer()
     }
 
     fun release() {
@@ -178,30 +182,93 @@ class QuranAudioPlayer(
     }
 
     private suspend fun handleItemEnded() {
-        val state = _snapshot.value
-        val end = ayahSequenceEnd
-        val surah = state.currentSurahNumber
-        val ayah = state.currentAyahInSurah
-        if (end != null && surah != null && ayah != null && ayah < end) {
-            playSurahAyah(surah, ayah + 1, end, stopsAtSurahEnd)
-            return
+        playbackMutex.withLock {
+            val state = _snapshot.value
+            val end = ayahSequenceEnd
+            val surah = state.currentSurahNumber
+            val ayah = state.currentAyahInSurah
+            if (end != null && surah != null && ayah != null && ayah < end) {
+                playSurahAyahLocked(surah, ayah + 1, end, stopsAtSurahEnd)
+                return@withLock
+            }
+            if (stopsAtSurahEnd) {
+                player.pause()
+                player.clearMediaItems()
+                syncFromPlayer()
+                return@withLock
+            }
+            playNextLocked(null)
         }
-        if (stopsAtSurahEnd) {
-            player.pause()
-            player.clearMediaItems()
-            syncFromPlayer()
-            return
-        }
-        playNext(null)
     }
 
-    private fun startPlayback(
+    private suspend fun playSurahAyahLocked(
+        surahNumber: Int,
+        fromAyah: Int,
+        totalAyahs: Int,
+        stopsAtSurahEnd: Boolean,
+    ) {
+        _snapshot.update { it.copy(isLoading = true, errorMessage = null) }
+        try {
+            this@QuranAudioPlayer.stopsAtSurahEnd = stopsAtSurahEnd
+            val uri = withContext(Dispatchers.IO) {
+                audioRepository.ayahStreamingUri(surahNumber, fromAyah)
+            }
+            startPlaybackLocked(
+                uri = uri.toString(),
+                surahNumber = surahNumber,
+                ayahInSurah = fromAyah,
+                sequenceEnd = totalAyahs,
+            )
+        } catch (e: Exception) {
+            _snapshot.update {
+                it.copy(isLoading = false, errorMessage = e.message ?: "Playback failed")
+            }
+            notifyUpdate()
+        }
+    }
+
+    private suspend fun playFullSurahLocked(surahNumber: Int, stopsAtSurahEnd: Boolean) {
+        _snapshot.update { it.copy(isLoading = true, errorMessage = null) }
+        try {
+            this@QuranAudioPlayer.stopsAtSurahEnd = stopsAtSurahEnd
+            val uri = withContext(Dispatchers.IO) {
+                audioRepository.playbackUri(surahNumber)
+            }
+            startPlaybackLocked(
+                uri = uri.toString(),
+                surahNumber = surahNumber,
+                ayahInSurah = null,
+                sequenceEnd = null,
+            )
+        } catch (e: Exception) {
+            _snapshot.update {
+                it.copy(isLoading = false, errorMessage = e.message ?: "Playback failed")
+            }
+            notifyUpdate()
+        }
+    }
+
+    private suspend fun playNextLocked(totalAyahsForCurrentSurah: Int?) {
+        val state = _snapshot.value
+        val surah = state.currentSurahNumber ?: return
+        val ayah = state.currentAyahInSurah ?: return
+        val end = ayahSequenceEnd
+        if (end != null && ayah < end) {
+            playSurahAyahLocked(surah, ayah + 1, end, stopsAtSurahEnd)
+            return
+        }
+        val nextSurah = (surah + 1).coerceAtMost(114)
+        playFullSurahLocked(nextSurah, stopsAtSurahEnd = false)
+    }
+
+    private fun startPlaybackLocked(
         uri: String,
         surahNumber: Int,
         ayahInSurah: Int?,
         sequenceEnd: Int?,
     ) {
         player.stop()
+        player.clearMediaItems()
         player.setMediaItem(MediaItem.fromUri(uri))
         player.prepare()
         ayahSequenceEnd = sequenceEnd
@@ -215,6 +282,15 @@ class QuranAudioPlayer(
         }
         player.play()
         syncFromPlayer()
+    }
+
+    private fun stopPlayerLocked() {
+        player.stop()
+        player.clearMediaItems()
+        ayahSequenceEnd = null
+        stopsAtSurahEnd = false
+        _snapshot.value = QuranPlaybackSnapshot()
+        notifyUpdate()
     }
 
     private fun syncFromPlayer() {

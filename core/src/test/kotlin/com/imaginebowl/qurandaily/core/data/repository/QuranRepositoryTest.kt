@@ -66,4 +66,31 @@ class QuranRepositoryTest {
         repository.clearQuranCache()
         assertFalse(repository.isQuranDownloaded())
     }
+
+    @Test
+    fun repeatedFetches_reuseInMemoryBundle() = runTest {
+        val bundle = TestFixtures.makeBundle()
+        repository.saveQuranData(bundle.surahs, bundle.ayahsBySurah, bundle.juzs)
+        storage.quranBundleLoadCount = 0
+
+        repeat(10) {
+            repository.fetchAyah(1, 1)
+        }
+
+        assertEquals(0, storage.quranBundleLoadCount)
+    }
+
+    @Test
+    fun clearQuranCache_invalidatesInMemoryBundle() = runTest {
+        val bundle = TestFixtures.makeBundle()
+        repository.saveQuranData(bundle.surahs, bundle.ayahsBySurah, bundle.juzs)
+        repository.fetchSurahs()
+        repository.clearQuranCache()
+
+        try {
+            repository.fetchSurahs()
+            error("Expected NotDownloaded")
+        } catch (_: QuranError.NotDownloaded) {
+        }
+    }
 }

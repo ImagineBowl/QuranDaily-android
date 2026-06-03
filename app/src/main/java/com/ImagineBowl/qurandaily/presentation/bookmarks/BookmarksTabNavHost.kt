@@ -102,7 +102,6 @@ fun BookmarksTabNavHost(
                 sharedAudioViewModel = sharedAudioViewModel,
                 detailViewModel = detailViewModel,
                 onBack = { navController.popBackStack() },
-                surahsForPlayer = listState.surahs,
             )
         }
     }

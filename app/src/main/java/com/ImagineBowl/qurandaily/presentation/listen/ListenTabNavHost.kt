@@ -15,7 +15,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.imaginebowl.qurandaily.di.AppContainer
@@ -42,9 +41,6 @@ fun ListenTabNavHost(
         viewModelStoreOwner = activity,
         factory = ListenViewModelFactory(container),
     )
-    val backStackEntry by navController.currentBackStackEntryAsState()
-    val atListenRoot = backStackEntry?.destination?.route == Routes.LISTEN_HOME
-
     NavHost(
         navController = navController,
         startDestination = Routes.LISTEN_HOME,
@@ -54,7 +50,6 @@ fun ListenTabNavHost(
             ListenScreen(
                 viewModel = listenViewModel,
                 sharedAudioViewModel = sharedAudioViewModel,
-                showMiniPlayer = atListenRoot,
                 onReadAndListen = { surah, ayah ->
                     navController.navigate(Routes.surahRead(surah, ayah, autoPlay = true))
                 },
@@ -106,7 +101,6 @@ fun ListenTabNavHost(
                 onRecordRecentListen = { sn, name, ayah ->
                     listenViewModel.recordRecentListen(sn, name, ayah)
                 },
-                surahsForPlayer = listenState.surahs,
             )
         }
     }

@@ -43,39 +43,38 @@ fun DownloadScreen(
             .fillMaxSize()
             .padding(AppDimensions.sectionSpacing),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(AppDimensions.sectionSpacing),
+        verticalArrangement = Arrangement.Center,
     ) {
-        Column(
-            modifier = Modifier.weight(1f),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
-        ) {
-            Icon(
-                imageVector = Icons.Default.Download,
-                contentDescription = null,
-                modifier = Modifier.size(72.dp),
-                tint = Accent,
-            )
-            Text(
-                text = "Welcome to QuranDaily",
-                style = MaterialTheme.typography.headlineMedium,
-                textAlign = TextAlign.Center,
-            )
-            Text(
-                text = "Download Quran data once to read offline with Arabic text and Urdu translation.",
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.padding(horizontal = 8.dp),
-            )
-            DownloadProgressSection(progress = uiState.progress)
-        }
-
+        Icon(
+            imageVector = Icons.Default.Download,
+            contentDescription = null,
+            modifier = Modifier.size(72.dp),
+            tint = Accent,
+        )
+        Text(
+            text = "Welcome to QuranDaily",
+            style = MaterialTheme.typography.headlineMedium,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(top = AppDimensions.sectionSpacing),
+        )
+        Text(
+            text = "Download Quran data once to read offline with Arabic text and Urdu translation.",
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+            modifier = Modifier
+                .padding(horizontal = 8.dp)
+                .padding(top = AppDimensions.sectionSpacing),
+        )
+        DownloadProgressSection(progress = uiState.progress)
         LargePrimaryButton(
             text = "Download Quran Data",
             onClick = viewModel::startDownload,
             enabled = !uiState.isDownloading,
-            modifier = Modifier.padding(horizontal = 8.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp)
+                .padding(top = 20.dp),
         )
     }
 }

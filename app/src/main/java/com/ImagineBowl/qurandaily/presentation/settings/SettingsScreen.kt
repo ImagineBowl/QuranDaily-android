@@ -40,6 +40,7 @@ import com.imaginebowl.qurandaily.core.domain.model.AppThemeMode
 import com.imaginebowl.qurandaily.data.billing.TipProduct
 import com.imaginebowl.qurandaily.core.domain.model.ArabicFontChoice
 import com.imaginebowl.qurandaily.core.domain.model.UrduFontChoice
+import com.imaginebowl.qurandaily.ui.layout.TabContentWindowInsets
 import com.imaginebowl.qurandaily.ui.theme.Accent
 import com.imaginebowl.qurandaily.ui.util.formattedAudio
 import com.imaginebowl.qurandaily.ui.util.formattedQuranData
@@ -66,6 +67,7 @@ fun SettingsScreen(
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
+        contentWindowInsets = TabContentWindowInsets,
         topBar = {
             TopAppBar(
                 title = { Text("Settings") },

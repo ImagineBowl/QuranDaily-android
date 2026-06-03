@@ -40,10 +40,10 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.imaginebowl.qurandaily.core.domain.model.RecentListen
 import com.imaginebowl.qurandaily.core.domain.model.Surah
-import com.imaginebowl.qurandaily.presentation.audio.AudioMiniPlayerBar
 import com.imaginebowl.qurandaily.presentation.audio.AudioPlayerSheet
 import com.imaginebowl.qurandaily.presentation.audio.SharedAudioViewModel
 import com.imaginebowl.qurandaily.ui.components.LargePrimaryButton
+import com.imaginebowl.qurandaily.ui.layout.TabContentWindowInsets
 import com.imaginebowl.qurandaily.ui.theme.Accent
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -52,7 +52,6 @@ fun ListenScreen(
     viewModel: ListenViewModel,
     sharedAudioViewModel: SharedAudioViewModel,
     onReadAndListen: (surahNumber: Int, ayahNumber: Int) -> Unit,
-    showMiniPlayer: Boolean,
     modifier: Modifier = Modifier,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -72,6 +71,7 @@ fun ListenScreen(
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
+        contentWindowInsets = TabContentWindowInsets,
         topBar = {
             TopAppBar(
                 title = { Text("Listen") },
@@ -84,15 +84,6 @@ fun ListenScreen(
                     containerColor = MaterialTheme.colorScheme.background,
                 ),
             )
-        },
-        bottomBar = {
-            if (showMiniPlayer && sharedAudioViewModel.showMiniPlayer) {
-                AudioMiniPlayerBar(
-                    sharedAudioViewModel = sharedAudioViewModel,
-                    surahs = uiState.surahs,
-                    onOpenFullPlayer = { showAudioSheet = true },
-                )
-            }
         },
     ) { padding ->
         when {
@@ -231,7 +222,6 @@ private fun AyahReferencePicker(
                 )
             }
         }
-        Spacer(modifier = Modifier.height(24.dp))
     }
 }
 

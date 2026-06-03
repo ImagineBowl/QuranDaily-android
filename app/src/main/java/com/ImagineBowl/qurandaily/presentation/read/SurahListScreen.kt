@@ -43,6 +43,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.imaginebowl.qurandaily.core.domain.model.Juz
 import com.imaginebowl.qurandaily.core.domain.model.Surah
 import com.imaginebowl.qurandaily.presentation.audio.SharedAudioViewModel
+import com.imaginebowl.qurandaily.ui.layout.TabContentWindowInsets
 import com.imaginebowl.qurandaily.ui.theme.Accent
 import com.imaginebowl.qurandaily.ui.theme.AppDimensions
 
@@ -86,6 +87,7 @@ fun SurahListScreen(
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
+        contentWindowInsets = TabContentWindowInsets,
         topBar = {
             TopAppBar(
                 title = { Text("QuranDaily") },

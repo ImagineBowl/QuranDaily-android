@@ -1,11 +1,12 @@
 package com.imaginebowl.qurandaily.presentation.root
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -16,6 +17,7 @@ import com.imaginebowl.qurandaily.presentation.download.DownloadViewModel
 import com.imaginebowl.qurandaily.di.DownloadViewModelFactory
 import com.imaginebowl.qurandaily.core.domain.model.AppThemeMode
 import com.imaginebowl.qurandaily.presentation.main.MainTabScreen
+import com.imaginebowl.qurandaily.ui.theme.Accent
 
 @Composable
 fun RootScreen(
@@ -27,25 +29,29 @@ fun RootScreen(
         factory = DownloadViewModelFactory(container),
     )
     val uiState by downloadViewModel.uiState.collectAsStateWithLifecycle()
-    var isReady by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         downloadViewModel.checkDownloadStatus()
     }
 
-    LaunchedEffect(uiState.isDownloaded) {
-        if (uiState.isDownloaded) {
-            isReady = true
+    when {
+        !uiState.hasCheckedDownload -> {
+            Box(
+                modifier = modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center,
+            ) {
+                CircularProgressIndicator(color = Accent)
+            }
         }
-    }
-
-    if (isReady || uiState.isDownloaded) {
-        MainTabScreen(
-            container = container,
-            onThemeChanged = onThemeChanged,
-            modifier = modifier,
-        )
-    } else {
-        DownloadScreen(viewModel = downloadViewModel, modifier = modifier)
+        uiState.isDownloaded -> {
+            MainTabScreen(
+                container = container,
+                onThemeChanged = onThemeChanged,
+                modifier = modifier,
+            )
+        }
+        else -> {
+            DownloadScreen(viewModel = downloadViewModel, modifier = modifier)
+        }
     }
 }

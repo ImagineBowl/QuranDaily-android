@@ -5,6 +5,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -16,6 +18,7 @@ import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
+import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -26,7 +29,9 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -48,11 +53,12 @@ fun AudioPlayerSheet(
     surahs: List<Surah>,
     onDismiss: () -> Unit,
 ) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val currentSurahNumber by sharedAudioViewModel.currentSurahNumber.collectAsStateWithLifecycle()
     val currentAyah by sharedAudioViewModel.currentAyahInSurah.collectAsStateWithLifecycle()
     val isPlaying by sharedAudioViewModel.isPlaying.collectAsStateWithLifecycle()
     val isLoading by sharedAudioViewModel.isLoadingAudio.collectAsStateWithLifecycle()
-    val currentTime by sharedAudioViewModel.currentTime.collectAsStateWithLifecycle()
+    val displayTime by sharedAudioViewModel.displayTime.collectAsStateWithLifecycle()
     val duration by sharedAudioViewModel.duration.collectAsStateWithLifecycle()
     val arabicPreview by sharedAudioViewModel.currentAyahArabicPreview.collectAsStateWithLifecycle()
     val selectedSurah by sharedAudioViewModel.selectedSurahNumber.collectAsStateWithLifecycle()
@@ -64,12 +70,21 @@ fun AudioPlayerSheet(
     val surah = surahs.firstOrNull { it.number == displaySurahNumber }
     val isDownloaded = downloadedSurahs.contains(displaySurahNumber)
 
-    ModalBottomSheet(onDismissRequest = onDismiss) {
+    LaunchedEffect(sheetState) {
+        sheetState.expand()
+    }
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        dragHandle = { BottomSheetDefaults.DragHandle() },
+    ) {
         Column(
             modifier = Modifier
-                .fillMaxWidth()
+                .fillMaxSize()
                 .padding(bottom = 32.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.SpaceBetween,
         ) {
             Row(
                 modifier = Modifier
@@ -90,6 +105,10 @@ fun AudioPlayerSheet(
                 Box(modifier = Modifier.sizeIn(minWidth = AppDimensions.minimumTapSize))
             }
 
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
             Box(
                 modifier = Modifier
                     .padding(horizontal = 28.dp, vertical = 16.dp)
@@ -146,7 +165,7 @@ fun AudioPlayerSheet(
             }
 
             if (duration > 0) {
-                val progress = (currentTime / duration).toFloat().coerceIn(0f, 1f)
+                val progress = (displayTime / duration).toFloat().coerceIn(0f, 1f)
                 Slider(
                     value = progress,
                     onValueChange = { sharedAudioViewModel.seek(it.toDouble()) },
@@ -159,7 +178,7 @@ fun AudioPlayerSheet(
                         .fillMaxWidth()
                         .padding(horizontal = 28.dp),
                 ) {
-                    Text(formatPlaybackTime(currentTime), style = MaterialTheme.typography.bodySmall)
+                    Text(formatPlaybackTime(displayTime), style = MaterialTheme.typography.bodySmall)
                     Box(modifier = Modifier.weight(1f))
                     Text(formatPlaybackTime(duration), style = MaterialTheme.typography.bodySmall)
                 }
@@ -245,6 +264,9 @@ fun AudioPlayerSheet(
                     textAlign = TextAlign.Center,
                 )
             }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
         }
     }
 }

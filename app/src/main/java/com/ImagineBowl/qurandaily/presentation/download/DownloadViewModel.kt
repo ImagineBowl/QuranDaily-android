@@ -14,6 +14,7 @@ import kotlinx.coroutines.launch
 data class DownloadUiState(
     val progress: DownloadProgress = DownloadProgress.Idle,
     val isDownloaded: Boolean = false,
+    val hasCheckedDownload: Boolean = false,
 ) {
     val isDownloading: Boolean
         get() = progress is DownloadProgress.Downloading
@@ -29,7 +30,9 @@ class DownloadViewModel(
     fun checkDownloadStatus() {
         viewModelScope.launch {
             val downloaded = fetchQuranUseCase.isDownloaded()
-            _uiState.update { it.copy(isDownloaded = downloaded) }
+            _uiState.update {
+                it.copy(isDownloaded = downloaded, hasCheckedDownload = true)
+            }
         }
     }
 
