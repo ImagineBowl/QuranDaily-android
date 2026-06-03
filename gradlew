@@ -114,6 +114,17 @@ case "$( uname )" in                #(
   NONSTOP* )        nonstop=true ;;
 esac
 
+# Resolve JAVA_HOME before locating java (jdk.local.properties or Android Studio JBR on macOS)
+if [ -z "$JAVA_HOME" ] && [ -f "$APP_HOME/jdk.local.properties" ]; then
+    JAVA_HOME=$(grep -E '^org\.gradle\.java\.home=' "$APP_HOME/jdk.local.properties" | head -1 | cut -d= -f2- | tr -d '\r')
+    JAVA_HOME=$(printf '%s' "$JAVA_HOME" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+    export JAVA_HOME
+fi
+if [ -z "$JAVA_HOME" ] && [ "$darwin" = true ] && [ -x "/Applications/Android Studio.app/Contents/jbr/Contents/Home/bin/java" ]; then
+    JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
+    export JAVA_HOME
+fi
+
 CLASSPATH="\\\"\\\""
 
 
